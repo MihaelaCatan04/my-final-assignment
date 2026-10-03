@@ -88,13 +88,19 @@ class YourAgent:
         if OUT_OF_CORPUS.search(question):
             return _flagged_refusal(f"out of corpus: {question[:80]}")
 
-        return answer_question(
+        result = answer_question(
             _expand_query(question),
             self.documents,
             self.client,
             max_tool_calls=3,
             top_k=3,
         )
+
+        # Any refusal (flagged + no citations) must use the exact approved wording
+        if result.answer.needs_human_review and not result.answer.citations:
+            return _flagged_refusal("no corpus support found")
+
+        return result
 
     def __call__(self, question: str) -> ResearchAnswer:
         return self.run(question).answer
